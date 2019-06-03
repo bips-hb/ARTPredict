@@ -17,6 +17,8 @@
 #' @export
 artp.fit <- function(X, y, groups, trunc.point = 5, n.permutations = 50) {
 
+  n.cov <- ncol(X)
+
   # permutate the output (y) n.permutations time, fit a logistic
   # regression and obtain the p-value for each covariate
   p.values.permutations <- sapply(1:n.permutations, function(k) {
