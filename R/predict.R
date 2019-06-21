@@ -19,6 +19,11 @@ artp.predict <- function(fit, X.new, alpha = .1) {
   # select the groups that are 'significant'
   selected.groups <- fit$p.values.group %>% filter(p <= alpha)
 
+  # no significant groups at all
+  if(nrow(selected.groups) == 0) {
+    stop("no significant groups found")
+  }
+
   # predict for each observation the value of y
   y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
 
