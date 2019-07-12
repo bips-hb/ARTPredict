@@ -4,7 +4,8 @@
 \alias{artp.fit}
 \title{Apply the ARTP to Binary Data}
 \usage{
-artp.fit(X, y, groups, trunc.point = 5, n.permutations = 50)
+artp.fit(X, y, groups, trunc.point = 5, n.permutations = 50,
+  verbose = FALSE)
 }
 \arguments{
 \item{X}{Binary matrix of size n x m}
@@ -17,6 +18,8 @@ indices of the covariates that belong to that group}
 \item{trunc.point}{The truncation point used (Default = 5)}
 
 \item{n.permutations}{Number of permutations (Default = 50)}
+
+\item{verbose}{If TRUE, shows progress bar (Default = FALSE)}
 }
 \value{
 A data frame p.values.groups with the p value for each
