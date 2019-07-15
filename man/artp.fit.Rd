@@ -5,7 +5,7 @@
 \title{Apply the ARTP to Binary Data}
 \usage{
 artp.fit(X, y, groups, trunc.point = 5, n.permutations = 50,
-  verbose = FALSE)
+  verbose = FALSE, single_covariates = TRUE)
 }
 \arguments{
 \item{X}{Binary matrix of size n x m}
@@ -20,6 +20,9 @@ indices of the covariates that belong to that group}
 \item{n.permutations}{Number of permutations (Default = 50)}
 
 \item{verbose}{If TRUE, shows progress bar (Default = FALSE)}
+
+\item{single_covariates}{If TRUE, covariates that do not belong to a group, get
+their own individual groups (Default = TRUE)}
 }
 \value{
 A data frame p.values.groups with the p value for each

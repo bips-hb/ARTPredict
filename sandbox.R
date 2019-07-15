@@ -12,7 +12,7 @@ groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
 
 y <- sapply(1:n, function(i) {
     x <- X[i, ]
-    lg <- -4 + 3*sum(x[c(3, 5)]) + 1.01*sum(x[c(30, 33, 39)])
+    lg <- -4 + 4*sum(x[c(3, 5)]) + 4*sum(x[c(30, 33, 39)])
     py <- 1 / (1 + exp(-lg))
     rbinom(1,1,py)
   })

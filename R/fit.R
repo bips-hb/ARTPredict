@@ -11,16 +11,25 @@
 #' @param trunc.point The truncation point used (Default = 5)
 #' @param n.permutations Number of permutations (Default = 50)
 #' @param verbose If TRUE, shows progress bar (Default = FALSE)
+#' @param single_covariates If TRUE, covariates that do not belong to a group, get
+#'                          their own individual groups (Default = TRUE)
 #'
 #' @return A data frame p.values.groups with the p value for each
 #'         group
 #'
 #' @export
-artp.fit <- function(X, y, groups, trunc.point = 5, n.permutations = 50, verbose = FALSE) {
+artp.fit <- function(X, y, groups, trunc.point = 5, n.permutations = 50, verbose = FALSE, single_covariates = TRUE) {
 
   n.cov <- ncol(X)
 
   n.permutations.done <- 0
+
+  if (single_covariates) {
+    # Any variable not in a group gets assigned their own group
+    variables_in_groups <- do.call(c, groups)
+    variables_not_in_groups <- as.list(setdiff(1:n.cov, variables_in_groups))
+    groups <- c(groups, variables_not_in_groups)
+  }
 
   if (verbose) {
     pb <- txtProgressBar(min = 0, max = n.cov*n.permutations, title = "no. of permutations", style = 3)
