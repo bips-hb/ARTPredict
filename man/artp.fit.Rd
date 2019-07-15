@@ -10,7 +10,7 @@ artp.fit(X, y, groups, trunc.point = 5, n.permutations = 50,
 \arguments{
 \item{X}{Binary matrix of size n x m}
 
-\item{y}{Binaryy response vector of length n}
+\item{y}{Binary response vector of length n}
 
 \item{groups}{List of groups. Each item is a vector with the
 indices of the covariates that belong to that group}

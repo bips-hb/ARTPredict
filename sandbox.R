@@ -2,6 +2,36 @@ library(DDTA)
 library(readr)
 library(ARTPredict)
 
+
+### Creating a simple toy data set
+m = 100
+n = 1000
+X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+
+groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+
+y <- sapply(1:n, function(i) {
+    x <- X[i, ]
+    lg <- -4 + 1.5*sum(x[c(3, 5)]) + 1.01*sum(x[c(30, 33, 39)])
+    py <- 1 / (1 + exp(-lg))
+    rbinom(1,1,py)
+  })
+
+res <- artp.fit(X, y, groups = groups, verbose = T)
+res$p.values.group
+
+library(ARTP)
+
+load("artp_test_MR.RData")
+fit <- artp.fit(X = X_train, y = y_train, groups = pathways, trunc.point = 5, verbose = T)
+
+pval.gruppe
+
+group <- pathways[[66]]
+X <- X_train
+y <- y_train
+
+
 n.obs <- 50
 n.cov <- 100
 n.groups <- 25

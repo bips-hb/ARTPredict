@@ -5,7 +5,7 @@
 #' is m.
 #'
 #' @param X Binary matrix of size n x m
-#' @param y Binaryy response vector of length n
+#' @param y Binary response vector of length n
 #' @param groups List of groups. Each item is a vector with the
 #'               indices of the covariates that belong to that group
 #' @param trunc.point The truncation point used (Default = 5)
@@ -25,6 +25,20 @@ artp.fit <- function(X, y, groups, trunc.point = 5, n.permutations = 50, verbose
   if (verbose) {
     pb <- txtProgressBar(min = 0, max = n.cov*n.permutations, title = "no. of permutations", style = 3)
   }
+
+  # compute the p-values
+  p.values <- sapply(1:n.cov, function(i) {
+    model <- glm(y ~ X[,i], family = binomial(link = "logit"))
+
+    # update progress bar
+    if (verbose) {
+      n.permutations.done <<- n.permutations.done + 1
+      setTxtProgressBar(pb, n.permutations.done)
+    }
+
+    # get the lowest p-value of the covariates in the model
+    coefficients(summary(model))[2,4]
+    })
 
   # permutate the output (y) n.permutations time, fit a logistic
   # regression and obtain the p-value for each covariate
@@ -56,25 +70,24 @@ artp.fit <- function(X, y, groups, trunc.point = 5, n.permutations = 50, verbose
   }
 
   # turn p.values.permutations into a matrix
-  p.values.permutations <- matrix(p.values.permutations, nrow = n.permutations)
+  p.values.permutations <- matrix(p.values.permutations, ncol = n.permutations)
 
-  ### TODO: Add to p.values.permutations. The first column should be the actual
-  ### p-values
-
-  ### get the p-values for each group by applying the ARTP function written by Malte
+  # combine the actual p-values with the permutated p-values
+  p.values.combined <- t(cbind(p.values, p.values.permutations))
+  colnames(p.values.combined) <- NULL
 
   # go over each group
   artp.output <- sapply(groups, function(group) {
     # get the p values obtained while permutating for the current group
-    data <- t(as.matrix(p.values.permutations[, group]))
+    data <- t(as.matrix(p.values.combined[, group]))
     # apply the ARTP to get the p-values for the group
-    ARTP(data, J = min(trunc.point, nrow(data)), n.permutations - 1)
+    ARTP(data, J = min(trunc.point, nrow(data)), n.permutations)
   })
 
   # create data frame with the results
   res <- data.frame(
     id = 1:length(groups),
-    group.size = sapply(groups, function(group) length(group[[1]])), # the group sizes
+    group.size = sapply(groups, function(group) length(group)), # the group sizes
     truncation.point = unlist(artp.output[1, ]), # the truncation points for each group
     p = unlist(artp.output[2, ]) # the p-values associated with each group
   )
