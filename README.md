@@ -47,6 +47,10 @@ prediction <- artp.predict(fit, X_test, alpha = 0.1)
 
 See the documentation `?artp.fit` and `?artp.predict` for more info. 
 
+### Acknowledgements
+
+We gratefully acknowledge the financial support from the innovation fund (“Innovationsfonds”) of the Federal Joint Committee in Germany (grant number: 01VSF16020).
+
 ### Contact
 
 Louis Dijkstra\
