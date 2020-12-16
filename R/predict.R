@@ -5,8 +5,40 @@
 #' @param alpha The significance level
 #'
 #' @return The predictions for the outcome y
+#' 
+#' @example 
+#' seed(235478965)
+#' m = 100
+#' n = 2000
+#' X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+#' X_train <- X[1:1000,]
+#' X_test <- X[1001:2000,]
+#' 
+#' groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+#' 
+#' y <- sapply(1:n, function(i) {
+#'   x <- X[i, ]
+#'   lg <- -4 + 4 * sum(x[c(3, 5)]) + 4 * sum(x[c(30, 33, 39)])
+#'   py <- 1 / (1 + exp(-lg))
+#'   rbinom(1,1,py)
+#'   })
+#'   
+#' y_train <- y[1:1000]
+#' y_test  <- y[1001:2000] 
+#'   
+#' res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3) 
+#' 
+#' pred <- artp.predict(res, X_test, alpha = .2)
+#' table(pred$y.hat, y_test)
+#' 
+#' glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
+#' probabilities <- predict(glm.out, as.data.frame(X_test), type = "response")
+#' predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+#' 
+#' table(predicted.classes, y_test)
+#' 
 #' @export
-artp.predict <- function(fit, X.new, alpha = .1) {
+artp.predict <- function(fit, X.new, alpha = .2) {
 
   # get the old y values. Used to fit the model for each group
   y.old <- fit$y
@@ -45,8 +77,14 @@ artp.predict <- function(fit, X.new, alpha = .1) {
     })
 
   # probabilities of y being one
-  y.prob <- rowMeans(y.prob.per.group)
+  # y.prob <- rowMeans(y.prob.per.group)
+  y.group <- rowSums(y.prob.per.group)
 
   # decide whether TRUE or FALSE
-  y.hat = as.numeric((y.prob > .5))
+  # y.hat = as.numeric((y.prob > .5))
+  y.hat = as.numeric((y.group > 1))
+  
+  # out <- list(selected.groups = selected.groups, y.prob = y.prob, y.hat = y.hat)
+  out <- list(selected.groups = selected.groups, y.group = y.group, y.hat = y.hat)
+  out
 }
