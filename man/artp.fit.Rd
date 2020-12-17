@@ -4,16 +4,28 @@
 \alias{artp.fit}
 \title{Apply the ARTP to Binary Data}
 \usage{
-artp.fit(X, y, groups, trunc.point = 5, n.permutations = 50,
-  verbose = FALSE, single_covariates = TRUE)
+artp.fit(
+  X,
+  y,
+  groups,
+  adjust_vars = NULL,
+  trunc.point = 5,
+  n.permutations = 50,
+  verbose = FALSE,
+  single_covariates = TRUE,
+  parallel = FALSE,
+  nc = 3
+)
 }
 \arguments{
-\item{X}{Binary matrix of size n x m}
+\item{X}{Binary matrix of size n x m, adjustment variables are could be continous (e.g., age)}
 
 \item{y}{Binary response vector of length n}
 
 \item{groups}{List of groups. Each item is a vector with the
 indices of the covariates that belong to that group}
+
+\item{adjust_vars}{Indices of adjustment variables for the regression (Default = NULL)}
 
 \item{trunc.point}{The truncation point used (Default = 5)}
 
@@ -23,6 +35,10 @@ indices of the covariates that belong to that group}
 
 \item{single_covariates}{If TRUE, covariates that do not belong to a group, get
 their own individual groups (Default = TRUE)}
+
+\item{parallel}{Boolean, whether to use parallel:mcapply (Default = FALSE)}
+
+\item{nc}{Number of cores to use for parallel:mcmapply (Default = 3)}
 }
 \value{
 A data frame p.values.groups with the p value for each

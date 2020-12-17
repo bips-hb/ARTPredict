@@ -12,16 +12,18 @@ First, one runs `artp.fit`. The resulting fit can be used for prediction with `a
 ```R
 library(ARTPredict)
 
-### Creating a simple toy data set
-m = 100
-n = 10000
+### Set seed
+set.seed(43)
 
+### Create a simple dataset
+m <- 100
+n <- 10000
 X <- matrix(rbinom(m * n, 1, .05), ncol = m)
 
-# There are 4 groups:
-groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+# Create 4 groups
+groups <- list(1:10, 30:40, 80:100, c(3,5,30,33,39))
 
-# The binary responses are generated given the groups
+# Generate binary response given the groups
 y <- sapply(1:n, function(i) {
     x <- X[i, ]
     lg <- -4 + 4*sum(x[c(3, 5)]) + 4*sum(x[c(30, 33, 39)])
@@ -30,8 +32,8 @@ y <- sapply(1:n, function(i) {
   })
 
 ### Divide the simulated data in a train and test dataset
-
 train_ind <- sort(sample(seq_len(n), size = floor(n/2)))
+
 X_train = X[train_ind, ]
 X_test = X[-train_ind, ]
 
@@ -42,7 +44,26 @@ y_test = y[-train_ind]
 fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
 
 ### Predict
-prediction <- artp.predict(fit, X_test, alpha = 0.1)
+prediction <- artp.predict(fit, X_test, alpha = 0.6)
+table(prediction$y.hat, y_test)
+
+### Handle adjustment variables
+adjust_vars <- c(22, 23, 50)
+fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, groups = groups, verbose = TRUE)
+prediction2 <- artp.predict(fit2, X_test, alpha = 0.6)
+table(prediction2$y.hat, y_test)
+
+### Parallel, system.time and memory profiling
+system.time({
+  fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
+  prediction <- artp.predict(fit, X_test, alpha = 0.6)
+  table(prediction$y.hat, y_test)
+})
+system.time({
+  fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, parallel = TRUE)
+  prediction <- artp.predict(fit, X_test, alpha = 0.6)
+  table(prediction$y.hat, y_test)
+})
 ``` 
 
 See the documentation `?artp.fit` and `?artp.predict` for more info. 
@@ -54,5 +75,5 @@ We gratefully acknowledge the financial support from the innovation fund (“Inn
 ### Contact
 
 Louis Dijkstra\
-Leibniz Institute for Prevention Research & Epidemiology  
+Leibniz Institute for Prevention Research & Epidemiology - BIPS GmbH
 E-mail: dijkstra (at) leibniz-bips.de
