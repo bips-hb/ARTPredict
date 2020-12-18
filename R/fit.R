@@ -105,14 +105,14 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     p.values.permutations <- parallel::mcmapply(function(k) {
 
       # create permutation
-      set.seed(k)
+      # set.seed(k)
       permutation <- sample(y)
 
       # leave one covariate out each time and store the p-value
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- stats::glm(y ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
+        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
 
         # update progress bar
         if (verbose) {
@@ -136,7 +136,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- stats::glm(y ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
+        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
 
         # update progress bar
         if (verbose) {
