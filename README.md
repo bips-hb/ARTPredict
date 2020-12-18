@@ -10,6 +10,8 @@ Let `X` be the `n x m` binary matrix of observations and let `y` be the binary r
 First, one runs `artp.fit`. The resulting fit can be used for prediction with `artp.predict`, e.g., 
 
 ```R
+devtools::load_all()
+# or
 library(ARTPredict)
 
 ### Set seed
@@ -54,16 +56,41 @@ prediction2 <- artp.predict(fit2, X_test, alpha = 0.6)
 table(prediction2$y.hat, y_test)
 
 ### Parallel, system.time and memory profiling
-system.time({
-  fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
-  prediction <- artp.predict(fit, X_test, alpha = 0.6)
-  table(prediction$y.hat, y_test)
-})
-system.time({
-  fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, parallel = TRUE)
-  prediction <- artp.predict(fit, X_test, alpha = 0.6)
-  table(prediction$y.hat, y_test)
-})
+fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, parallel = TRUE)
+prediction <- artp.predict(fit, X_test, alpha = 0.6)
+table(prediction$y.hat, y_test)
+
+### Example 2:
+set.seed(NULL)
+set.seed(235478965)
+m = 100
+n = 2000
+X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+X_train <- X[1:1000,]
+X_test <- X[1001:2000,]
+
+groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+
+y <- sapply(1:n, function(i) {
+  x <- X[i, ]
+  lg <- -4 + 4 * sum(x[c(3, 5)]) + 4 * sum(x[c(30, 33, 39)])
+  py <- 1 / (1 + exp(-lg))
+  rbinom(1,1,py)
+  })
+
+y_train <- y[1:1000]
+y_test  <- y[1001:2000]
+
+res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
+
+pred <- artp.predict(res, X_test, alpha = .2)
+table(pred$y.hat, y_test)
+
+glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
+probabilities <- predict(glm.out, as.data.frame(X_test), type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+table(predicted.classes, y_test)
 ``` 
 
 See the documentation `?artp.fit` and `?artp.predict` for more info. 

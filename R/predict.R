@@ -7,8 +7,7 @@
 #' @return The predictions for the outcome y
 #'
 #' @example
-#' set.seed(NULL)
-#' set.seed(235478965)
+#' seed(235478965)
 #' m = 100
 #' n = 2000
 #' X <- matrix(rbinom(m * n, 1, .05), ncol = m)
