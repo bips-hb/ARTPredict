@@ -105,7 +105,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     p.values.permutations <- parallel::mcmapply(function(k) {
 
       # create permutation
-      # set.seed(k)
+      set.seed(k)
       permutation <- sample(y)
 
       # leave one covariate out each time and store the p-value
@@ -129,7 +129,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     p.values.permutations <- sapply(1:n.permutations, function(k) {
 
       # create permutation
-      # set.seed(k)
+      set.seed(k)
       permutation <- sample(y)
 
       # leave one covariate out each time and store the p-value
@@ -190,13 +190,11 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   list(
     p.values.group = res, # p-values for each group
     groups = groups, # the groups themselves
-    # groups.new = groups.pvalue, # the recoded group indices in case of adjust_vars
     X = X, # the raw covariate data # too large output
     y = y, # the original output # too large output
     adjust_vars = adjust_vars, # indices of adjustment variables
     parallel = parallel, # if fit and predict can be run using mcapply
     nc = nc,
-    p.values.combined = p.values.combined,
     n.permutations = n.permutations # the number of permutations
   )
 }
