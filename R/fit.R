@@ -196,6 +196,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     adjust_vars = adjust_vars, # indices of adjustment variables
     parallel = parallel, # if fit and predict can be run using mcapply
     nc = nc,
+    p.values.combined = p.values.combined,
     n.permutations = n.permutations # the number of permutations
   )
 }

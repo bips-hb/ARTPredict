@@ -27,7 +27,7 @@
 #' y_train <- y[1:1000]
 #' y_test  <- y[1001:2000]
 #'
-#' fit <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
+#' res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
 #'
 #' pred <- artp.predict(res, X_test, alpha = .2)
 #' table(pred$y.hat, y_test)
