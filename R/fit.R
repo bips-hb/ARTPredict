@@ -20,6 +20,28 @@
 #' @return A data frame p.values.groups with the p value for each
 #'         group
 #'
+#' @example
+#' m = 100
+#' n = 2000
+#' X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+#' X_train <- X[1:1000,]
+#' X_test <- X[1001:2000,]
+#'
+#' groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+#'
+#' y <- sapply(1:n, function(i) {
+#'   x <- X[i, ]
+#'   lg <- -4 + 4 * sum(x[c(3, 5)]) + 4 * sum(x[c(30, 33, 39)])
+#'   py <- 1 / (1 + exp(-lg))
+#'   rbinom(1,1,py)
+#'   })
+#'
+#' y_train <- y[1:1000]
+#' y_test  <- y[1001:2000]
+#'
+#' res <- artp.fit(X_train, y_train, groups = groups, verbose = T)
+#' res$p.values.group
+#'
 #' @export
 artp.fit <- function(X, y, groups, adjust_vars = NULL,
                      trunc.point = 5, n.permutations = 50,
@@ -143,9 +165,10 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   colnames.X <- colnames(X)
   colnames.pvalue <- dimnames(p.values.combined)[[2]]
 
-  groups.pvalue <- lapply(groups, function(group) {
-    which(colnames.pvalue %in% colnames.X[group])
-  })
+  # groups.pvalue <- lapply(groups, function(group) {
+  #   which(colnames.pvalue %in% colnames.X[group])
+  # })
+  groups.pvalue <- groups
 
   # go over each group
   artp.output <- sapply(groups.pvalue, function(group) {

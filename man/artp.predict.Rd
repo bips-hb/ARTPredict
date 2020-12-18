@@ -4,7 +4,7 @@
 \alias{artp.predict}
 \title{Predict the Outcome with the ARTP}
 \usage{
-artp.predict(fit, X.new, alpha = 0.1)
+artp.predict(fit, X.new, alpha = 0.2)
 }
 \arguments{
 \item{fit}{The output of fit.artp}
