@@ -9,7 +9,9 @@ Authors@R: c(
     role = c("aut")),
   person("Ronja", "Foraita", email = "foraita@leibniz-bips.de",
     role = c("aut")))
-Description: A package for predicting binary outcomes using the ARTP method according to: Yu K et al. Pathway analysis by adaptive combination of p-values. Genet Epidemiol 2009; 33: 700–709.
+Description: A package for predicting binary outcomes using the ARTP method according to: 
+  Yu K et al. Pathway analysis by adaptive combination of p-values. 
+  Genet Epidemiol 2009; 33: 700–709.
 Depends: stats
 Suggests: parallel
 Recommends: dplyr

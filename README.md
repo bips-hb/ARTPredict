@@ -46,21 +46,21 @@ y_test = y[-train_ind]
 fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
 
 ### Predict
-prediction <- artp.predict(fit, X_test, alpha = 0.6)
+prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 
 ### Handle adjustment variables
 adjust_vars <- c(22, 23, 50)
 fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, groups = groups, verbose = TRUE)
-prediction2 <- artp.predict(fit2, X_test, alpha = 0.6)
+prediction2 <- artp.predict(fit2, X_test, alpha = 0.2)
 table(prediction2$y.hat, y_test)
 
 ### Parallel, system.time and memory profiling
 fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, parallel = TRUE)
-prediction <- artp.predict(fit, X_test, alpha = 0.6)
+prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 
-### Example 2:
+### Compare with glm
 set.seed(NULL)
 set.seed(235478965)
 m = 100
