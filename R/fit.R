@@ -129,7 +129,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     p.values.permutations <- sapply(1:n.permutations, function(k) {
 
       # create permutation
-      set.seed(k)
+      # set.seed(k)
       permutation <- sample(y)
 
       # leave one covariate out each time and store the p-value
