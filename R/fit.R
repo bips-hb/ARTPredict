@@ -11,7 +11,7 @@
 #' @param adjust_vars Indices of adjustment variables for the regression (Default = NULL)
 #' @param trunc.point The truncation point used (Default = 5)
 #' @param n.permutations Number of permutations (Default = 50)
-#' @param verbose If TRUE, shows progress bar (Default = FALSE)
+#' @param verbose If TRUE, shows progress bar (Default = FALSE), FALSE in case of parallel <- TRUE
 #' @param single_covariates If TRUE, covariates that do not belong to a group, get
 #'                          their own individual groups (Default = TRUE)
 #' @param parallel Boolean, whether to use parallel:mcapply (Default = FALSE)
@@ -165,9 +165,9 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   colnames.X <- colnames(X)
   colnames.pvalue <- dimnames(p.values.combined)[[2]]
 
-  # groups.pvalue <- lapply(groups, function(group) {
-  #   which(colnames.pvalue %in% colnames.X[group])
-  # })
+  groups.pvalue <- lapply(groups, function(group) {
+    which(colnames.pvalue %in% colnames.X[group])
+  })
   groups.pvalue <- groups
 
   # go over each group

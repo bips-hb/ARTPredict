@@ -1,13 +1,13 @@
-## ARTPredict: Prediction for Binary Outcomes with the ARTP 
+## ARTPredict: Prediction for Binary Outcomes with the ARTP
 --------------------------------------------------------
 
-`ARTPredict` is an `R` package for predicting binary outcomes using the ARTP method. 
+`ARTPredict` is an `R` package for predicting binary outcomes using the ARTP method.
 
-### Usage 
+### Usage
 
-Let `X` be the `n x m` binary matrix of observations and let `y` be the binary response vector of length `n`. The `groups` are given in a list where each entry is a vector that represent a single group, e.g., `groups = list(c(1,3,5), c(2,4), c(3,4))` represents three groups. Note that the last group overlaps with the first and second group. 
+Let `X` be the `n x m` binary matrix of observations and let `y` be the binary response vector of length `n`. The `groups` are given in a list where each entry is a vector that represent a single group, e.g., `groups = list(c(1,3,5), c(2,4), c(3,4))` represents three groups. Note that the last group overlaps with the first and second group.
 
-First, one runs `artp.fit`. The resulting fit can be used for prediction with `artp.predict`, e.g., 
+First, one runs `artp.fit`. The resulting fit can be used for prediction with `artp.predict`, e.g.,
 
 ```R
 devtools::load_all()
@@ -56,7 +56,7 @@ prediction2 <- artp.predict(fit2, X_test, alpha = 0.2)
 table(prediction2$y.hat, y_test)
 
 ### Parallel, system.time and memory profiling
-fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, parallel = TRUE)
+fit <- artp.fit(X_train, y_train, groups = groups, verbose = FALSE, parallel = TRUE)
 prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 
@@ -91,9 +91,9 @@ probabilities <- predict(glm.out, as.data.frame(X_test), type = "response")
 predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
 table(predicted.classes, y_test)
-``` 
+```
 
-See the documentation `?artp.fit` and `?artp.predict` for more info. 
+See the documentation `?artp.fit` and `?artp.predict` for more info.
 
 ### Acknowledgements
 
