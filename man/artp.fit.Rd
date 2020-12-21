@@ -31,7 +31,8 @@ indices of the covariates that belong to that group}
 
 \item{n.permutations}{Number of permutations (Default = 50)}
 
-\item{verbose}{If TRUE, shows progress bar (Default = FALSE), FALSE in case of parallel <- TRUE}
+\item{verbose}{If TRUE, shows progress bar (Default = FALSE),
+FALSE in case of parallel <- TRUE}
 
 \item{single_covariates}{If TRUE, covariates that do not belong to a group, get
 their own individual groups (Default = TRUE)}
@@ -41,8 +42,8 @@ their own individual groups (Default = TRUE)}
 \item{nc}{Number of cores to use for parallel:mcmapply (Default = 3)}
 }
 \value{
-A data frame p.values.groups with the p value for each
-        group
+A list of input parameters or artp.predict, including a
+        data frame p.values.groups with the p value for each group
 }
 \description{
 Applies the ARTP to binary data given the observed covariates and the

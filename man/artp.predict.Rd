@@ -4,7 +4,7 @@
 \alias{artp.predict}
 \title{Predict the Outcome with the ARTP}
 \usage{
-artp.predict(fit, X.new, alpha = 0.2)
+artp.predict(fit, X.new, alpha = 0.2, speedglm = FALSE)
 }
 \arguments{
 \item{fit}{The output of fit.artp}
@@ -12,9 +12,11 @@ artp.predict(fit, X.new, alpha = 0.2)
 \item{X.new}{The new observation matrix}
 
 \item{alpha}{The significance level}
+
+\item{speedglm}{To use `speedglm` instead of `glm` (Default = FALSE)}
 }
 \value{
-The predictions for the outcome y
+A list including predictions for the outcome y
 }
 \description{
 Predict the Outcome with the ARTP

@@ -3,8 +3,9 @@
 #' @param fit The output of fit.artp
 #' @param X.new The new observation matrix
 #' @param alpha The significance level
+#' @param speedglm To use `speedglm` instead of `glm` (Default = FALSE)
 #'
-#' @return The predictions for the outcome y
+#' @return A list including predictions for the outcome y
 #'
 #' @example
 #' set.seed(235478965)
@@ -37,9 +38,9 @@
 #'
 #' table(predicted.classes, y_test)
 #'
+#'
 #' @export
-artp.predict <- function(fit, X.new, alpha = .2) {
-
+artp.predict <- function(fit, X.new, alpha = .2, speedglm = FALSE) {
   # get the old y values. Used to fit the model for each group
   y.old <- fit$y
   X.old <- fit$X
@@ -47,7 +48,7 @@ artp.predict <- function(fit, X.new, alpha = .2) {
   adjust_vars <- fit$adjust_vars
   parallel <- fit$parallel
 
-  # select the groups that are 'significant'
+  # select the groups that are 'significant' using dplyr or subset data frame
   # selected.groups <- fit$p.values.group %>% dplyr::filter(p <= alpha)
   selected.groups <- fit$p.values.group[fit$p.values.group$p <= alpha, ]
 
@@ -68,7 +69,11 @@ artp.predict <- function(fit, X.new, alpha = .2) {
       data.new <- X.new[, c(adjust_vars, group)]
 
       # fit the model on the old data for that group alone
-      model <- stats::glm(y.old ~ data.old, family = stats::binomial("logit"))
+      if (isTRUE(speedglm)) {
+        model <- speedglm::speedglm(y.old ~ data.old, family = stats::binomial("logit"))
+      } else {
+        model <- stats::glm(y.old ~ data.old, family = stats::binomial("logit"))
+      }
 
       # predict whether or not the outcome is 1 given the new data of the current group
       y.new <- stats::predict(model, newdata = data.frame(data.new), type = "response")
@@ -88,7 +93,11 @@ artp.predict <- function(fit, X.new, alpha = .2) {
       data.new <- X.new[, c(adjust_vars, group)]
 
       # fit the model on the old data for that group alone
-      model <- stats::glm(y.old ~ data.old, family = stats::binomial("logit"))
+      if (isTRUE(speedglm)) {
+        model <- speedglm::speedglm(y.old ~ data.old, family = stats::binomial("logit"))
+      } else {
+        model <- stats::glm(y.old ~ data.old, family = stats::binomial("logit"))
+      }
 
       # predict whether or not the outcome is 1 given the new data of the current group
       y.new <- stats::predict(model, newdata = data.frame(data.new), type = "response")

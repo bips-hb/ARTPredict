@@ -81,7 +81,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     groups <- c(groups, variables_not_in_groups)
 
     # name the new groups
-    names(groups) <- c(gnames, colnames(X)[variables_not_in_groups]))
+    names(groups) <- c(gnames, colnames(X)[unlist(variables_not_in_groups)])
   }
 
   p.values.combined <- get.p.value(

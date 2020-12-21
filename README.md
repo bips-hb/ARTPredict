@@ -48,6 +48,9 @@ fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
 ### Predict
 prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
+# predict using `speedglm`
+prediction <- artp.predict(fit, X_test, alpha = 0.2, speedglm = TRUE)
+table(prediction$y.hat, y_test)
 
 ### Handle adjustment variables
 adjust_vars <- c(22, 23, 50)
@@ -84,6 +87,9 @@ y_test  <- y[1001:2000]
 res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
 
 pred <- artp.predict(res, X_test, alpha = .2)
+table(pred$y.hat, y_test)
+
+pred <- artp.predict(res, X_test, alpha = .2, speedglm = TRUE)
 table(pred$y.hat, y_test)
 
 glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
