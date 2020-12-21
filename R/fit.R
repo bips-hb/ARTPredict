@@ -11,14 +11,15 @@
 #' @param adjust_vars Indices of adjustment variables for the regression (Default = NULL)
 #' @param trunc.point The truncation point used (Default = 5)
 #' @param n.permutations Number of permutations (Default = 50)
-#' @param verbose If TRUE, shows progress bar (Default = FALSE), FALSE in case of parallel <- TRUE
+#' @param verbose If TRUE, shows progress bar (Default = FALSE),
+#'                FALSE in case of parallel <- TRUE
 #' @param single_covariates If TRUE, covariates that do not belong to a group, get
 #'                          their own individual groups (Default = TRUE)
 #' @param parallel Boolean, whether to use parallel:mcapply (Default = FALSE)
 #' @param nc Number of cores to use for parallel:mcmapply (Default = 3)
 #'
-#' @return A data frame p.values.groups with the p value for each
-#'         group
+#' @return A list of input parameters or artp.predict, including a
+#'         data frame p.values.groups with the p value for each group
 #'
 #' @example
 #' m = 100
@@ -60,6 +61,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 
     # create an iterator
     cov_ind <- setdiff(1:ncol(X), adjust_vars)
+    n.cov <- length(cov_ind)
   } else {
     adjust_vars <- NULL
     n.cov <- ncol(X)
@@ -68,25 +70,32 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 
   if (single_covariates) {
     # Any variable not in a group gets assigned their own group
+    if (!is.null(names(groups))) {
+     gnames <- names(groups)
+   } else {
+     gnames <- paste0('grp_', 1:length(groups))
+   }
+
     variables_in_groups <- do.call(c, groups)
     variables_not_in_groups <- as.list(setdiff(cov_ind, variables_in_groups))
     groups <- c(groups, variables_not_in_groups)
-    # uncomment to name the new groups
-    # names(groups) <- c(gnames, paste0("grp", glen + 1:length(variables_not_in_groups)))
+
+    # name the new groups
+    names(groups) <- c(gnames, colnames(X)[variables_not_in_groups]))
   }
 
-  p.values.combined <- get.p.value(X, y, n.permutations, n.cov, cov_ind, adjust_vars,
+  p.values.combined <- get.p.value(
+    X, y, n.permutations, n.cov,
+    cov_ind, adjust_vars,
     parallel = parallel, nc = nc, verbose = verbose
   )
 
   # map pvalue indices to group indices
   colnames.X <- colnames(X)
   colnames.pvalue <- dimnames(p.values.combined)[[2]]
-
   groups.pvalue <- lapply(groups, function(group) {
     which(colnames.pvalue %in% colnames.X[group])
   })
-  groups.pvalue <- groups
 
   # go over each group
   artp.output <- sapply(groups.pvalue, function(group) {
@@ -110,7 +119,8 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     groups = groups, # the groups themselves
     X = X, # the raw covariate data # too large output
     y = y, # the original output # too large output
-    adjust_vars = adjust_vars, # indices of adjustment variables
+    adjust_vars = adjust_vars, # indices of adjustment variables,
+    p.values.combined = p.values.combined, # permutation results
     parallel = parallel, # if fit and predict can be run using mcapply
     nc = nc,
     n.permutations = n.permutations # the number of permutations
