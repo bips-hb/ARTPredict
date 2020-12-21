@@ -76,7 +76,6 @@ artp.predict <- function(fit, X.new, alpha = .2) {
       # decide whether TRUE or FALSE
       y.new <- (y.new > .5)
     }, mc.cores = fit$nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
-
   } else {
     # predict for each observation the value of y
     y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
@@ -105,7 +104,7 @@ artp.predict <- function(fit, X.new, alpha = .2) {
 
   # decide whether TRUE or FALSE
   # y.hat = as.numeric((y.prob > .5))
-  y.hat = as.numeric((y.group > 1))
+  y.hat <- as.numeric((y.group > 1))
 
   # out <- list(selected.groups = selected.groups, y.prob = y.prob, y.hat = y.hat)
   out <- list(selected.groups = selected.groups, y.group = y.group, y.hat = y.hat)

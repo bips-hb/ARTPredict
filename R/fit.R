@@ -47,9 +47,8 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
                      trunc.point = 5, n.permutations = 50,
                      verbose = FALSE, single_covariates = TRUE,
                      parallel = FALSE, nc = 3) {
-
   if (is.null(colnames(X))) {
-    colnames(X) <- paste0('var_', 1:ncol(X))
+    colnames(X) <- paste0("var_", 1:ncol(X))
   }
 
   if (!missing(adjust_vars)) {
@@ -61,7 +60,6 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 
     # create an iterator
     cov_ind <- setdiff(1:ncol(X), adjust_vars)
-
   } else {
     adjust_vars <- NULL
     n.cov <- ncol(X)
@@ -77,89 +75,9 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     # names(groups) <- c(gnames, paste0("grp", glen + 1:length(variables_not_in_groups)))
   }
 
-  n.permutations.done <- 0
-
-  if (verbose) {
-    pb <- utils::txtProgressBar(min = 0, max = n.cov * n.permutations, title = "no. of permutations", style = 3)
-  }
-
-  # compute the p-values
-  p.values <- sapply(cov_ind, function(i) {
-    model <- stats::glm(y ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
-
-    # update progress bar
-    if (verbose) {
-      n.permutations.done <<- n.permutations.done + 1
-      utils::setTxtProgressBar(pb, n.permutations.done)
-    }
-
-    # get the lowest p-value of the covariates in the model
-    # stats::coefficients(summary(model))[2, 4]
-    stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
-  })
-
-  # permutate the output (y) n.permutations time, fit a logistic
-  # regression and obtain the p-value for each covariate
-
-  if (isTRUE(parallel)) {
-    p.values.permutations <- parallel::mcmapply(function(k) {
-
-      # create permutation
-      set.seed(k)
-      permutation <- sample(y)
-
-      # leave one covariate out each time and store the p-value
-      p.values <- sapply(cov_ind, function(i) {
-
-        # fit the model without the covariate i
-        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
-
-        # update progress bar
-        if (verbose) {
-          n.permutations.done <<- n.permutations.done + 1
-          utils::setTxtProgressBar(pb, n.permutations.done)
-        }
-
-        # get the lowest p-value of the covariates in the model
-        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
-      })
-
-    }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
-  } else {
-    p.values.permutations <- sapply(1:n.permutations, function(k) {
-
-      # create permutation
-      set.seed(k)
-      permutation <- sample(y)
-
-      # leave one covariate out each time and store the p-value
-      p.values <- sapply(cov_ind, function(i) {
-
-        # fit the model without the covariate i
-        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)], family = stats::binomial(link = "logit"))
-
-        # update progress bar
-        if (verbose) {
-          n.permutations.done <<- n.permutations.done + 1
-          utils::setTxtProgressBar(pb, n.permutations.done)
-        }
-
-        # get the lowest p-value of the covariates in the model
-        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
-      })
-    })
-  }
-
-  if (verbose) {
-    close(pb)
-  }
-
-  # turn p.values.permutations into a matrix (redundant)
-  # p.values.permutations <- matrix(p.values.permutations, ncol = n.permutations)
-
-  # combine the actual p-values with the permutated p-values
-  p.values.combined <- t(cbind(p.values, p.values.permutations))
-  dimnames(p.values.combined) <- list(NULL, colnames(X)[cov_ind])
+  p.values.combined <- get.p.value(X, y, n.permutations, n.cov, cov_ind, adjust_vars,
+    parallel = parallel, nc = nc, verbose = verbose
+  )
 
   # map pvalue indices to group indices
   colnames.X <- colnames(X)
@@ -197,4 +115,104 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     nc = nc,
     n.permutations = n.permutations # the number of permutations
   )
+}
+
+get.p.value <- function(X, y,
+                        n.permutations,
+                        n.cov, cov_ind, adjust_vars,
+                        parallel = FALSE, nc = NULL,
+                        verbose = FALSE) {
+  n.permutations.done <- 0
+
+  if (verbose) {
+    pb <- utils::txtProgressBar(
+      min = 0, max = n.cov * n.permutations,
+      title = "no. of permutations", style = 3
+    )
+  }
+
+  # compute the p-values
+  p.values <- sapply(cov_ind, function(i) {
+    model <- stats::glm(y ~ X[, c(adjust_vars, i)],
+      family = stats::binomial(link = "logit")
+    )
+
+    # update progress bar
+    if (verbose) {
+      n.permutations.done <<- n.permutations.done + 1
+      utils::setTxtProgressBar(pb, n.permutations.done)
+    }
+
+    # get the lowest p-value of the covariates in the model
+    # stats::coefficients(summary(model))[2, 4]
+    stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+  })
+
+  # permutate the output (y) n.permutations time, fit a logistic
+  # regression and obtain the p-value for each covariate
+
+  if (isTRUE(parallel)) {
+    p.values.permutations <- parallel::mcmapply(function(k) {
+
+      # create permutation
+      set.seed(k)
+      permutation <- sample(y)
+
+      # leave one covariate out each time and store the p-value
+      p.values <- sapply(cov_ind, function(i) {
+
+        # fit the model without the covariate i
+        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)],
+          family = stats::binomial(link = "logit")
+        )
+
+        # update progress bar
+        if (verbose) {
+          n.permutations.done <<- n.permutations.done + 1
+          utils::setTxtProgressBar(pb, n.permutations.done)
+        }
+
+        # get the lowest p-value of the covariates in the model
+        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+      })
+    }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+  } else {
+    p.values.permutations <- sapply(1:n.permutations, function(k) {
+
+      # create permutation
+      set.seed(k)
+      permutation <- sample(y)
+
+      # leave one covariate out each time and store the p-value
+      p.values <- sapply(cov_ind, function(i) {
+
+        # fit the model without the covariate i
+        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)],
+          family = stats::binomial(link = "logit")
+        )
+
+        # update progress bar
+        if (verbose) {
+          n.permutations.done <<- n.permutations.done + 1
+          utils::setTxtProgressBar(pb, n.permutations.done)
+        }
+
+        # get the lowest p-value of the covariates in the model
+        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+      })
+    })
+  }
+
+  if (verbose) {
+    close(pb)
+  }
+
+  # turn p.values.permutations into a matrix (redundant)
+  # p.values.permutations <- matrix(p.values.permutations, ncol = n.permutations)
+
+  # combine the actual p-values with the permutated p-values
+  p.values.combined <- t(cbind(p.values, p.values.permutations))
+  dimnames(p.values.combined) <- list(NULL, colnames(X)[cov_ind])
+
+  p.values.combined
 }

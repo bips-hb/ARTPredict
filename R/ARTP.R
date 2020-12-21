@@ -14,7 +14,6 @@
 #'
 #' @export
 ARTP <- function(daten, J, n_perm) {
-
   if (J > nrow(daten)) {
     stop("J must NOT be greater than nrow(daten)")
   }

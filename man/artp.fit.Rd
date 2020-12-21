@@ -31,7 +31,7 @@ indices of the covariates that belong to that group}
 
 \item{n.permutations}{Number of permutations (Default = 50)}
 
-\item{verbose}{If TRUE, shows progress bar (Default = FALSE)}
+\item{verbose}{If TRUE, shows progress bar (Default = FALSE), FALSE in case of parallel <- TRUE}
 
 \item{single_covariates}{If TRUE, covariates that do not belong to a group, get
 their own individual groups (Default = TRUE)}
