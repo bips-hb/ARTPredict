@@ -12,9 +12,9 @@ Authors@R: c(
 Description: A package for predicting binary outcomes using the ARTP method according to:
   Yu K et al. Pathway analysis by adaptive combination of p-values.
   Genet Epidemiol 2009; 33: 700–709.
-Depends: stats
-Suggests: parallel,
+Depends: stats,
   speedglm
+Suggests: parallel
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

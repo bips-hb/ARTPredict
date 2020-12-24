@@ -107,8 +107,8 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 
   # create data frame with the results
   res <- data.frame(
-    id = 1:length(groups.pvalue),
-    group.size = sapply(groups.pvalue, function(group) length(group)), # the group sizes
+    id = 1:length(groups),
+    group.size = sapply(groups, function(group) length(group)), # the group sizes
     truncation.point = unlist(artp.output[1, ]), # the truncation points for each group
     p = unlist(artp.output[2, ]) # the p-values associated with each group
   )
@@ -127,6 +127,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   )
 }
 
+#' @importFrom speedglm speedglm
 get.p.value <- function(X, y,
                         n.permutations,
                         n.cov, cov_ind, adjust_vars,
@@ -143,7 +144,7 @@ get.p.value <- function(X, y,
 
   # compute the p-values
   p.values <- sapply(cov_ind, function(i) {
-    model <- stats::glm(y ~ X[, c(adjust_vars, i)],
+    model <- speedglm::speedglm(y ~ X[, c(adjust_vars, i)],
       family = stats::binomial(link = "logit")
     )
 
@@ -155,7 +156,7 @@ get.p.value <- function(X, y,
 
     # get the lowest p-value of the covariates in the model
     # stats::coefficients(summary(model))[2, 4]
-    stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+    as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
   })
 
   # permutate the output (y) n.permutations time, fit a logistic
@@ -172,7 +173,7 @@ get.p.value <- function(X, y,
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)],
+        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i)],
           family = stats::binomial(link = "logit")
         )
 
@@ -183,7 +184,7 @@ get.p.value <- function(X, y,
         }
 
         # get the lowest p-value of the covariates in the model
-        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+        as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
       })
     }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
   } else {
@@ -197,7 +198,7 @@ get.p.value <- function(X, y,
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- stats::glm(permutation ~ X[, c(adjust_vars, i)],
+        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i)],
           family = stats::binomial(link = "logit")
         )
 
@@ -208,7 +209,7 @@ get.p.value <- function(X, y,
         }
 
         # get the lowest p-value of the covariates in the model
-        stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4]
+        as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
       })
     })
   }

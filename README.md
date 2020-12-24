@@ -10,10 +10,58 @@ Let `X` be the `n x m` binary matrix of observations and let `y` be the binary r
 First, one runs `artp.fit`. The resulting fit can be used for prediction with `artp.predict`, e.g.,
 
 ```R
+devtools::check()
 devtools::load_all()
 # or
 library(ARTPredict)
 
+assess_results <- function(response, labels) {
+  P <- sum(labels)
+  N <- sum(!labels)
+  TP <- sum(response & labels)
+  TN <- sum(!response & !labels)
+  FP <- sum(response & !labels)
+  FN <- sum(!response & labels)
+
+  # recall or tpr or sensitivity
+  recall <- TP / (TP + FN)
+  precision <- TP / (TP + FP)
+  specifity <- TN / (TN + FP)
+  fpr <- FP / (TN + FP)
+  fdr <- FP / (TP + FP)
+  accuracy <- (TP + TN) / (TP + TN + FP + FN)
+  f1score <- 2 * ((precision * recall) / (precision + recall))
+  # f1scoreb <- 2*TP / (2*TP + FP + FN)
+  prc_baseline <- P / (P + N)
+  aucs <- precrec::auc(curves =
+    precrec::evalmod(scores = response, labels = labels)
+  )[[4]]
+  roc_auc <- aucs[1]
+  prc_auc <- aucs[2]
+
+  ## Generate an sscurve object that contains ROC and Precision-Recall curves
+  ## already calculated AUC for the whole graph
+  # or
+  # auc_prc <- subset(auc(curves = sscurves), curvetypes == "PRC")[[4]]
+
+  data.frame(
+    list(
+      recall = recall,
+      precision = precision,
+      specifity = specifity,
+      fpr = fpr,
+      fdr = fdr,
+      accuracy = accuracy,
+      f1score = f1score,
+      roc_auc = roc_auc,
+      prc_baseline = prc_baseline,
+      prc_auc = prc_auc
+    )
+  )
+}
+```
+
+```R
 ### Set seed
 set.seed(43)
 
@@ -35,6 +83,7 @@ y <- sapply(1:n, function(i) {
 
 ### Divide the simulated data in a train and test dataset
 train_ind <- sort(sample(seq_len(n), size = floor(n/2)))
+# use floor(n/1.7) to create equal datasets
 
 X_train = X[train_ind, ]
 X_test = X[-train_ind, ]
@@ -48,21 +97,23 @@ fit <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE)
 ### Predict
 prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
-# predict using `speedglm`
-prediction <- artp.predict(fit, X_test, alpha = 0.2, speedglm = TRUE)
+assess_results(prediction$y.hat, y_test)
+
+### Parallel, system.time and memory profiling
+fit <- artp.fit(X_train, y_train, groups = groups, verbose = FALSE, parallel = TRUE)
+prediction <- artp.predict(fit = fit, X.new = X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
+assess_results(prediction$y.hat, y_test)
 
 ### Handle adjustment variables
 adjust_vars <- c(22, 23, 50)
 fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, groups = groups, verbose = TRUE)
 prediction2 <- artp.predict(fit2, X_test, alpha = 0.2)
 table(prediction2$y.hat, y_test)
+assess_results(prediction2$y.hat, y_test)
+```
 
-### Parallel, system.time and memory profiling
-fit <- artp.fit(X_train, y_train, groups = groups, verbose = FALSE, parallel = TRUE)
-prediction <- artp.predict(fit, X_test, alpha = 0.2)
-table(prediction$y.hat, y_test)
-
+```R
 ### Compare with glm
 set.seed(NULL)
 set.seed(235478965)
@@ -85,12 +136,9 @@ y_train <- y[1:1000]
 y_test  <- y[1001:2000]
 
 res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
-
 pred <- artp.predict(res, X_test, alpha = .2)
 table(pred$y.hat, y_test)
-
-pred <- artp.predict(res, X_test, alpha = .2, speedglm = TRUE)
-table(pred$y.hat, y_test)
+assess_results(pred$y.hat, y_test)
 
 glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
 probabilities <- predict(glm.out, as.data.frame(X_test), type = "response")
