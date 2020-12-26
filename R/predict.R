@@ -7,7 +7,7 @@
 #'
 #' @return A list including predictions for the outcome y
 #'
-#' @importFrom speedglm speedglm
+# @importFrom speedglm speedglm
 #'
 #' @example
 #' set.seed(235478965)

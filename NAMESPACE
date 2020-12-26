@@ -3,4 +3,3 @@
 export(ARTP)
 export(artp.fit)
 export(artp.predict)
-importFrom(speedglm,speedglm)

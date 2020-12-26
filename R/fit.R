@@ -144,7 +144,7 @@ get.p.value <- function(X, y,
 
   # compute the p-values
   p.values <- sapply(cov_ind, function(i) {
-    model <- speedglm::speedglm(y ~ X[, c(adjust_vars, i)],
+    model <- speedglm::speedglm(y ~ X[, c(adjust_vars, i), drop = FALSE],
       family = stats::binomial(link = "logit")
     )
 
@@ -173,7 +173,7 @@ get.p.value <- function(X, y,
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i)],
+        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
           family = stats::binomial(link = "logit")
         )
 
@@ -198,7 +198,7 @@ get.p.value <- function(X, y,
       p.values <- sapply(cov_ind, function(i) {
 
         # fit the model without the covariate i
-        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i)],
+        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
           family = stats::binomial(link = "logit")
         )
 
