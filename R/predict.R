@@ -7,7 +7,7 @@
 #'
 #' @return A list including predictions for the outcome y
 #'
-# @importFrom speedglm speedglm
+#' @importFrom speedglm speedglm
 #'
 #' @example
 #' set.seed(235478965)
@@ -49,6 +49,7 @@ artp.predict <- function(fit, X.new, alpha = .2) {
   groups <- fit$groups # the grouping with single_covariates appended
   adjust_vars <- fit$adjust_vars
   parallel <- fit$parallel
+  nc <- fit$nc
 
   # add column names because test and train data need to have same colnames
   if (is.null(dimnames(X.new)[[2]])) {
@@ -83,7 +84,7 @@ artp.predict <- function(fit, X.new, alpha = .2) {
 
       # decide whether TRUE or FALSE
       y.new <- (y.new > .5)
-    }, mc.cores = fit$nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+    }, mc.cores = nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
   } else {
     # predict for each observation the value of y
     y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
