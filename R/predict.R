@@ -49,7 +49,7 @@ artp.predict <- function(fit, X.new, alpha = .2) {
   groups <- fit$groups # the grouping with single_covariates appended
   adjust_vars <- fit$adjust_vars
   parallel <- fit$parallel
-  nc <- fit$nc
+  # nc <- fit$nc
 
   # add column names because test and train data need to have same colnames
   if (is.null(dimnames(X.new)[[2]])) {
@@ -67,44 +67,55 @@ artp.predict <- function(fit, X.new, alpha = .2) {
 
   if (isTRUE(parallel)) {
     # predict for each observation the value of y
-    y.prob.per.group <- parallel::mcmapply(function(group.id) {
-
-      # get the old data for the current group
-      group <- groups[[group.id]]
-      data.old <- data.frame(cbind(X.old[, c(adjust_vars, group), drop = FALSE], y = y.old))
-
-      # get the new data of the current group
-      data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
-
-      # fit the model on the old data for that group alone
-      model <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
-
-      # predict whether or not the outcome is 1 given the new data of the current group
-      y.new <- stats::predict(model, newdata = data.new, type = "response")
-
-      # decide whether TRUE or FALSE
-      y.new <- (y.new > .5)
-    }, mc.cores = nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+    # y.prob.per.group <- parallel::mcmapply(function(group.id) {
+    # plan(cluster, workers = c("n1", "n2", "n2", "n3"))
+    future::plan(future::multiprocess(gc = TRUE))
   } else {
-    # predict for each observation the value of y
-    y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
-      # get the old data for the current group
-      group <- groups[[group.id]]
-      data.old <- data.frame(cbind(X.old[, c(adjust_vars, group), drop = FALSE], y = y.old))
-
-      # get the new data of the current group
-      data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
-
-      # fit the model on the old data for that group alone
-      model <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
-
-      # predict whether or not the outcome is 1 given the new data of the current group
-      y.new <- stats::predict(model, newdata = data.new, type = "response")
-
-      # decide whether TRUE or FALSE
-      y.new <- (y.new > .5)
-    })
+    future::plan(future::sequential)
   }
+  y.prob.per.group <- future.apply::future_mapply(FUN = function(group.id) {
+    # get the old data for the current group
+    group <- groups[[group.id]]
+    data.old <- data.frame(cbind(X.old[, c(adjust_vars, group), drop = FALSE], "y" = y.old))
+
+    # get the new data of the current group
+    data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
+
+    # fit the model on the old data for that group alone
+    model <- tryCatch(
+        speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit")),
+        error = function(e) {
+          stats::glm(y ~ ., data.old, family = stats::binomial("logit"))
+        }
+    )
+
+    # predict whether or not the outcome is 1 given the new data of the current group
+    y.new <- stats::predict(model, newdata = data.new, type = "response")
+
+    # decide whether TRUE or FALSE
+    y.new <- (y.new > .5)
+    # }, mc.cores = nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+  }, group.id = selected.groups$id, SIMPLIFY = TRUE, future.packages = c('speedglm'), future.seed = NULL)
+  # } else {
+    # predict for each observation the value of y
+    # y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
+    #   # get the old data for the current group
+    #   group <- groups[[group.id]]
+    #   data.old <- data.frame(cbind(X.old[, c(adjust_vars, group), drop = FALSE], y = y.old))
+    #
+    #   # get the new data of the current group
+    #   data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
+    #
+    #   # fit the model on the old data for that group alone
+    #   model <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
+    #
+    #   # predict whether or not the outcome is 1 given the new data of the current group
+    #   y.new <- stats::predict(model, newdata = data.new, type = "response")
+    #
+    #   # decide whether TRUE or FALSE
+    #   y.new <- (y.new > .5)
+    # })
+  # }
 
   # probabilities of y being one
   # y.prob <- rowMeans(y.prob.per.group)

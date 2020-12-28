@@ -99,15 +99,17 @@ prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 assess_results(prediction$y.hat, y_test)
 
-### Parallel, system.time and memory profiling
-fit <- artp.fit(X_train, y_train, groups = groups, verbose = FALSE, parallel = TRUE)
+### Parallel using `future.apply` (formerly `parallel`)
+fit <- artp.fit(X = X_train, y = y_train, groups = groups, 
+  verbose = FALSE, parallel = TRUE)
 prediction <- artp.predict(fit = fit, X.new = X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 assess_results(prediction$y.hat, y_test)
 
 ### Handle adjustment variables
 adjust_vars <- c(22, 23, 50)
-fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, groups = groups, verbose = TRUE)
+fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, 
+  groups = groups, verbose = FALSE, parallel = TRUE)
 prediction2 <- artp.predict(fit2, X_test, alpha = 0.2)
 table(prediction2$y.hat, y_test)
 assess_results(prediction2$y.hat, y_test)

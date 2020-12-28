@@ -16,7 +16,7 @@
 #' @param single_covariates If TRUE, covariates that do not belong to a group, get
 #'                          their own individual groups (Default = TRUE)
 #' @param parallel Boolean, whether to use parallel:mcapply (Default = FALSE)
-#' @param nc Number of cores to use for parallel:mcmapply (Default = 3)
+# @param nc Number of cores to use for parallel:mcmapply (Default = 3)
 #'
 #' @return A list of input parameters or artp.predict, including a
 #'         data frame p.values.groups with the p value for each group
@@ -47,7 +47,9 @@
 artp.fit <- function(X, y, groups, adjust_vars = NULL,
                      trunc.point = 5, n.permutations = 50,
                      verbose = FALSE, single_covariates = TRUE,
-                     parallel = FALSE, nc = 3) {
+                     parallel = FALSE
+                     # , nc = 3
+                   ) {
   if (is.null(colnames(X))) {
     colnames(X) <- paste0("var_", 1:ncol(X))
   }
@@ -87,7 +89,8 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   p.values.combined <- get.p.value(
     X, y, n.permutations, n.cov,
     cov_ind, adjust_vars,
-    parallel = parallel, nc = nc, verbose = verbose
+    parallel = parallel, verbose = verbose
+    # , nc = nc
   )
 
   # map pvalue indices to group indices
@@ -122,7 +125,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     adjust_vars = adjust_vars, # indices of adjustment variables,
     p.values.combined = p.values.combined, # permutation results
     parallel = parallel, # if fit and predict can be run using mcapply
-    nc = nc,
+    # nc = nc,
     n.permutations = n.permutations # the number of permutations
   )
 }
@@ -131,7 +134,8 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 get.p.value <- function(X, y,
                         n.permutations,
                         n.cov, cov_ind, adjust_vars,
-                        parallel = FALSE, nc = NULL,
+                        parallel = FALSE,
+                        # nc = 3,
                         verbose = FALSE) {
   n.permutations.done <- 0
 
@@ -163,56 +167,63 @@ get.p.value <- function(X, y,
   # regression and obtain the p-value for each covariate
 
   if (isTRUE(parallel)) {
-    p.values.permutations <- parallel::mcmapply(function(k) {
-
-      # create permutation
-      set.seed(k)
-      permutation <- sample(y)
-
-      # leave one covariate out each time and store the p-value
-      p.values <- sapply(cov_ind, function(i) {
-
-        # fit the model without the covariate i
-        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
-          family = stats::binomial(link = "logit")
-        )
-
-        # update progress bar
-        if (verbose) {
-          n.permutations.done <<- n.permutations.done + 1
-          utils::setTxtProgressBar(pb, n.permutations.done)
-        }
-
-        # get the lowest p-value of the covariates in the model
-        as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
-      })
-    }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+    # p.values.permutations <- parallel::mcmapply(function(k) {
+    # plan(cluster, workers = c("n1", "n2", "n2", "n3"))
+    future::plan(future::multiprocess(gc = TRUE))
   } else {
-    p.values.permutations <- sapply(1:n.permutations, function(k) {
-
-      # create permutation
-      set.seed(k)
-      permutation <- sample(y)
-
-      # leave one covariate out each time and store the p-value
-      p.values <- sapply(cov_ind, function(i) {
-
-        # fit the model without the covariate i
-        model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
-          family = stats::binomial(link = "logit")
-        )
-
-        # update progress bar
-        if (verbose) {
-          n.permutations.done <<- n.permutations.done + 1
-          utils::setTxtProgressBar(pb, n.permutations.done)
-        }
-
-        # get the lowest p-value of the covariates in the model
-        as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
-      })
-    })
+    future::plan(future::sequential)
   }
+
+  p.values.permutations <- future.apply::future_mapply(FUN = function(k) {
+    # create permutation
+    set.seed(k)
+    permutation <- sample(y)
+
+    # leave one covariate out each time and store the p-value
+    p.values <- sapply(cov_ind, function(i) {
+
+      # fit the model without the covariate i
+      model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
+        family = stats::binomial(link = "logit")
+      )
+
+      # update progress bar
+      if (verbose) {
+        n.permutations.done <<- n.permutations.done + 1
+        utils::setTxtProgressBar(pb, n.permutations.done)
+      }
+
+      # get the lowest p-value of the covariates in the model
+      as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
+    })
+  # }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+}, k = 1:n.permutations, SIMPLIFY = TRUE, future.packages = c('speedglm'), future.seed = NULL)
+  # } else {
+  #   p.values.permutations <- sapply(1:n.permutations, function(k) {
+  #
+  #     # create permutation
+  #     set.seed(k)
+  #     permutation <- sample(y)
+  #
+  #     # leave one covariate out each time and store the p-value
+  #     p.values <- sapply(cov_ind, function(i) {
+  #
+  #       # fit the model without the covariate i
+  #       model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
+  #         family = stats::binomial(link = "logit")
+  #       )
+  #
+  #       # update progress bar
+  #       if (verbose) {
+  #         n.permutations.done <<- n.permutations.done + 1
+  #         utils::setTxtProgressBar(pb, n.permutations.done)
+  #       }
+  #
+  #       # get the lowest p-value of the covariates in the model
+  #       as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
+  #     })
+  #   })
+  # }
 
   if (verbose) {
     close(pb)

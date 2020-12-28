@@ -13,8 +13,7 @@ artp.fit(
   n.permutations = 50,
   verbose = FALSE,
   single_covariates = TRUE,
-  parallel = FALSE,
-  nc = 3
+  parallel = FALSE
 )
 }
 \arguments{
@@ -38,8 +37,6 @@ FALSE in case of parallel <- TRUE}
 their own individual groups (Default = TRUE)}
 
 \item{parallel}{Boolean, whether to use parallel:mcapply (Default = FALSE)}
-
-\item{nc}{Number of cores to use for parallel:mcmapply (Default = 3)}
 }
 \value{
 A list of input parameters or artp.predict, including a
