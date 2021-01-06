@@ -8,23 +8,25 @@ artp.fit(
   X,
   y,
   groups,
-  adjust_vars = NULL,
+  adjust_vars,
   trunc.point = 5,
   n.permutations = 50,
   verbose = FALSE,
   single_covariates = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  nc = 3
 )
 }
 \arguments{
-\item{X}{Binary matrix of size n x m, adjustment variables are could be continous (e.g., age)}
+\item{X}{Binary matrix of size n x m, adjustment variables could be 
+continuous (e.g., age)}
 
 \item{y}{Binary response vector of length n}
 
 \item{groups}{List of groups. Each item is a vector with the
-indices of the covariates that belong to that group}
+indexes of the covariates that belong to that group}
 
-\item{adjust_vars}{Indices of adjustment variables for the regression (Default = NULL)}
+\item{adjust_vars}{Indexes of adjustment variables for the regression (Default = NULL)}
 
 \item{trunc.point}{The truncation point used (Default = 5)}
 
@@ -36,14 +38,49 @@ FALSE in case of parallel <- TRUE}
 \item{single_covariates}{If TRUE, covariates that do not belong to a group, get
 their own individual groups (Default = TRUE)}
 
-\item{parallel}{Boolean, whether to use parallel:mcapply (Default = FALSE)}
+\item{parallel}{Boolean, whether to use future::plan("multiprocess") 
+(Default = FALSE)}
+
+\item{nc}{Number of cores/workers to use for future::plan("multiprocess")
+(Default = 3)}
 }
 \value{
-A list of input parameters or artp.predict, including a
-        data frame p.values.groups with the p value for each group
+A list of input parameters for artp.predict:
+        p.values.group: data frame of the p value for each group
+        groups: the groups themselves
+        X: the raw covariates data 
+        y: the original outcome # too large output
+        adjust_vars: indexes of adjustment variables
+        p.values.combined: permutation results
+        parallel: whether fit and predict can be run using multiprocessor
+        nc: n workers
+        n.permutations: the number of permutations
 }
 \description{
 Applies the ARTP to binary data given the observed covariates and the
 response. The number of observations is n. The number of covariates
 is m.
+}
+\examples{
+m = 100
+n = 2000
+X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+X_train <- X[1:1000,]
+X_test <- X[1001:2000,]
+
+groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+
+y <- sapply(1:n, function(i) {
+  x <- X[i, ]
+  lg <- -4 + 4 * sum(x[c(3, 5)]) + 4 * sum(x[c(30, 33, 39)])
+  py <- 1 / (1 + exp(-lg))
+  rbinom(1,1,py)
+  })
+
+y_train <- y[1:1000]
+y_test  <- y[1001:2000]
+
+res <- artp.fit(X = X_train, y = y_train, groups = groups, verbose = TRUE)
+res$p.values.group
+
 }

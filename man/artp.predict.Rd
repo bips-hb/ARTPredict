@@ -4,14 +4,18 @@
 \alias{artp.predict}
 \title{Predict the Outcome with the ARTP}
 \usage{
-artp.predict(fit, X.new, alpha = 0.2)
+artp.predict(fit, X.new, alpha, res.per.group, predict.all = FALSE)
 }
 \arguments{
 \item{fit}{The output of fit.artp}
 
 \item{X.new}{The new observation matrix}
 
-\item{alpha}{The significance level}
+\item{alpha}{The significance level, no default.}
+
+\item{res.per.group}{The output of predict.per.group, no default.}
+
+\item{predict.all}{To predict based on all groups (Default = FALSE)}
 }
 \value{
 A list including predictions for the outcome y

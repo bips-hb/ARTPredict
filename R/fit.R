@@ -1,27 +1,38 @@
 #' Apply the ARTP to Binary Data
 #'
-#' Applies the ARTP to binary data given the observed covariates and the
+#' @description Applies the ARTP to binary data given the observed covariates and the
 #' response. The number of observations is n. The number of covariates
 #' is m.
 #'
-#' @param X Binary matrix of size n x m, adjustment variables are could be continous (e.g., age)
+#' @param X Binary matrix of size n x m, adjustment variables could be 
+#'          continuous (e.g., age)
 #' @param y Binary response vector of length n
 #' @param groups List of groups. Each item is a vector with the
-#'               indices of the covariates that belong to that group
-#' @param adjust_vars Indices of adjustment variables for the regression (Default = NULL)
+#'               indexes of the covariates that belong to that group
+#' @param adjust_vars Indexes of adjustment variables for the regression (Default = NULL)
 #' @param trunc.point The truncation point used (Default = 5)
 #' @param n.permutations Number of permutations (Default = 50)
 #' @param verbose If TRUE, shows progress bar (Default = FALSE),
 #'                FALSE in case of parallel <- TRUE
 #' @param single_covariates If TRUE, covariates that do not belong to a group, get
 #'                          their own individual groups (Default = TRUE)
-#' @param parallel Boolean, whether to use parallel:mcapply (Default = FALSE)
-# @param nc Number of cores to use for parallel:mcmapply (Default = 3)
+#' @param parallel Boolean, whether to use future::plan("multiprocess") 
+#'                 (Default = FALSE)
+#' @param nc Number of cores/workers to use for future::plan("multiprocess")
+#'           (Default = 3)
 #'
-#' @return A list of input parameters or artp.predict, including a
-#'         data frame p.values.groups with the p value for each group
-#'
-#' @example
+#' @return A list of input parameters for artp.predict:
+#'         p.values.group: data frame of the p value for each group
+#'         groups: the groups themselves
+#'         X: the raw covariates data 
+#'         y: the original outcome # too large output
+#'         adjust_vars: indexes of adjustment variables
+#'         p.values.combined: permutation results
+#'         parallel: whether fit and predict can be run using multiprocessor
+#'         nc: n workers
+#'         n.permutations: the number of permutations
+#' 
+#' @examples
 #' m = 100
 #' n = 2000
 #' X <- matrix(rbinom(m * n, 1, .05), ncol = m)
@@ -40,16 +51,14 @@
 #' y_train <- y[1:1000]
 #' y_test  <- y[1001:2000]
 #'
-#' res <- artp.fit(X_train, y_train, groups = groups, verbose = T)
+#' res <- artp.fit(X = X_train, y = y_train, groups = groups, verbose = TRUE)
 #' res$p.values.group
 #'
 #' @export
-artp.fit <- function(X, y, groups, adjust_vars = NULL,
+artp.fit <- function(X, y, groups, adjust_vars,
                      trunc.point = 5, n.permutations = 50,
                      verbose = FALSE, single_covariates = TRUE,
-                     parallel = FALSE
-                     # , nc = 3
-                   ) {
+                     parallel = FALSE, nc = 3) {
   if (is.null(colnames(X))) {
     colnames(X) <- paste0("var_", 1:ncol(X))
   }
@@ -70,13 +79,13 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
     cov_ind <- 1:n.cov
   }
 
-  if (single_covariates) {
+  if (isTRUE(single_covariates)) {
     # Any variable not in a group gets assigned their own group
     if (!is.null(names(groups))) {
-     gnames <- names(groups)
-   } else {
-     gnames <- paste0('grp_', 1:length(groups))
-   }
+      gnames <- names(groups)
+    } else {
+      gnames <- paste0("grp_", 1:length(groups))
+    }
 
     variables_in_groups <- do.call(c, groups)
     variables_not_in_groups <- as.list(setdiff(cov_ind, variables_in_groups))
@@ -87,13 +96,12 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   }
 
   p.values.combined <- get.p.value(
-    X, y, n.permutations, n.cov,
-    cov_ind, adjust_vars,
-    parallel = parallel, verbose = verbose
-    # , nc = nc
+    X = X, y = y, n.permutations = n.permutations, n.cov = n.cov,
+    cov_ind = cov_ind, adjust_vars = adjust_vars,
+    parallel = parallel, verbose = verbose, nc = nc
   )
 
-  # map pvalue indices to group indices
+  # map pvalue indexes to group indexes
   colnames.X <- colnames(X)
   colnames.pvalue <- dimnames(p.values.combined)[[2]]
   groups.pvalue <- lapply(groups, function(group) {
@@ -102,7 +110,7 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
 
   # go over each group
   artp.output <- sapply(groups.pvalue, function(group) {
-    # get the p values obtained while permutating for the current group
+    # get the p values obtained while permuting for the current group
     data <- t(as.matrix(p.values.combined[, group]))
     # apply the ARTP to get the p-values for the group
     ARTP(data, J = min(trunc.point, nrow(data)), n.permutations)
@@ -120,22 +128,25 @@ artp.fit <- function(X, y, groups, adjust_vars = NULL,
   list(
     p.values.group = res, # p-values for each group
     groups = groups, # the groups themselves
-    X = X, # the raw covariate data # too large output
-    y = y, # the original output # too large output
-    adjust_vars = adjust_vars, # indices of adjustment variables,
+    X = X, # the raw covariates data # too large output
+    y = y, # the original outcome # too large output
+    adjust_vars = adjust_vars, # indexes of adjustment variables,
     p.values.combined = p.values.combined, # permutation results
-    parallel = parallel, # if fit and predict can be run using mcapply
-    # nc = nc,
+    parallel = parallel, # if fit and predict can be run using multiprocessor
+    nc = nc,
     n.permutations = n.permutations # the number of permutations
   )
 }
 
+#' @inherit artp.fit description
+#' @seealso artp.fit
 #' @importFrom speedglm speedglm
 get.p.value <- function(X, y,
                         n.permutations,
-                        n.cov, cov_ind, adjust_vars,
+                        n.cov, cov_ind,
+                        adjust_vars,
                         parallel = FALSE,
-                        # nc = 3,
+                        nc = 3,
                         verbose = FALSE) {
   n.permutations.done <- 0
 
@@ -169,7 +180,8 @@ get.p.value <- function(X, y,
   if (isTRUE(parallel)) {
     # p.values.permutations <- parallel::mcmapply(function(k) {
     # plan(cluster, workers = c("n1", "n2", "n2", "n3"))
-    future::plan(future::multiprocess(gc = TRUE))
+    # future::plan(future::multiprocess(gc = TRUE))
+    future::plan("multiprocess", workers = nc, gc = TRUE)
   } else {
     future::plan(future::sequential)
   }
@@ -196,8 +208,8 @@ get.p.value <- function(X, y,
       # get the lowest p-value of the covariates in the model
       as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
     })
-  # }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
-}, k = 1:n.permutations, SIMPLIFY = TRUE, future.packages = c('speedglm'), future.seed = NULL)
+    # }, mc.cores = nc, k = 1:n.permutations, SIMPLIFY = TRUE, mc.preschedule = TRUE)
+  }, k = 1:n.permutations, SIMPLIFY = TRUE, future.packages = c("speedglm"), future.seed = NULL)
   # } else {
   #   p.values.permutations <- sapply(1:n.permutations, function(k) {
   #

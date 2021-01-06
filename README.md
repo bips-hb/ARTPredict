@@ -99,6 +99,17 @@ prediction <- artp.predict(fit, X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 assess_results(prediction$y.hat, y_test)
 
+### Predict based on all groups, and then filter based on alpha
+prediction_all <- artp.predict(fit, X_test, alpha = 0.2, predict.all = TRUE)
+table(prediction_all$y.hat, y_test)
+assess_results(prediction_all$y.hat, y_test)
+
+### Predict based on all groups, and then filter based on alpha (separately)
+res.per.group <- predict.per.group(fit, X_test, predict.all = TRUE)
+prediction_all <- artp.predict(fit, X_test, res.per.group = res.per.group, alpha = 0.2)
+table(prediction_all$y.hat, y_test)
+assess_results(prediction_all$y.hat, y_test)
+
 ### Parallel using `future.apply` (formerly `parallel`)
 fit <- artp.fit(X = X_train, y = y_train, groups = groups, 
   verbose = FALSE, parallel = TRUE)
@@ -109,10 +120,11 @@ assess_results(prediction$y.hat, y_test)
 ### Handle adjustment variables
 adjust_vars <- c(22, 23, 50)
 fit2 <- artp.fit(X_train, y_train, adjust_vars = adjust_vars, 
-  groups = groups, verbose = FALSE, parallel = TRUE)
+  groups = groups, verbose = FALSE, parallel = FALSE)
 prediction2 <- artp.predict(fit2, X_test, alpha = 0.2)
 table(prediction2$y.hat, y_test)
 assess_results(prediction2$y.hat, y_test)
+
 ```
 
 ```R
@@ -139,6 +151,11 @@ y_test  <- y[1001:2000]
 
 res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
 pred <- artp.predict(res, X_test, alpha = .2)
+table(pred$y.hat, y_test)
+assess_results(pred$y.hat, y_test)
+
+res.per.group <- predict.per.group(res, X_test, predict.all = TRUE)
+preda <- artp.predict(res, X_test, alpha = .2, res.per.group = res.per.group, predict.all = TRUE)
 table(pred$y.hat, y_test)
 assess_results(pred$y.hat, y_test)
 
