@@ -2,24 +2,67 @@
 % Please edit documentation in R/predict.R
 \name{artp.predict}
 \alias{artp.predict}
-\title{Predict the Outcome with the ARTP}
+\title{Predict the outcome with the ARTP method}
 \usage{
 artp.predict(fit, X.new, alpha, res.per.group, predict.all = FALSE)
 }
 \arguments{
 \item{fit}{The output of fit.artp}
 
-\item{X.new}{The new observation matrix}
+\item{X.new}{The new observation matrix (n x m)}
 
-\item{alpha}{The significance level, no default.}
+\item{alpha}{The significance level, no default}
 
-\item{res.per.group}{The output of predict.per.group, no default.}
+\item{res.per.group}{The output of predict.per.group, no default}
 
-\item{predict.all}{To predict based on all groups (Default = FALSE)}
+\item{predict.all}{To predict outcome based on all groups (Default = FALSE)}
 }
 \value{
-A list including predictions for the outcome y
+A list including predictions for the outcome y:
+        selected.groups: data frame of the p value for each selected group based on alpha
+        y.prob.per.group: logical matrix of predicted outcome per group using `predict.per.group`
+        y.group: row sum of prediction per selected group based on alpha
+        y.hat: the predicted response
 }
 \description{
-Predict the Outcome with the ARTP
+Predicts the outcome based on the ARTP fit results, of binary data
+given the observed covariates.The function uses `speedglm`, and in case of
+non-applicability due to separation issues (in case of rare events), the function
+uses `glm`.
+}
+\examples{
+set.seed(235478965)
+m = 100
+n = 2000
+X <- matrix(rbinom(m * n, 1, .05), ncol = m)
+X_train <- X[1:1000,]
+X_test <- X[1001:2000,]
+
+groups = list(1:10, 30:40, 80:100, c(3,5,30,33,39))
+
+y <- sapply(1:n, function(i) {
+  x <- X[i, ]
+  lg <- -4 + 4 * sum(x[c(3, 5)]) + 4 * sum(x[c(30, 33, 39)])
+  py <- 1 / (1 + exp(-lg))
+  rbinom(1,1,py)
+  })
+
+y_train <- y[1:1000]
+y_test  <- y[1001:2000]
+
+res <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, trunc.point = 3)
+
+pred <- artp.predict(fit = res, X.new = X_test, alpha = .2)
+table(pred$y.hat, y_test)
+
+glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
+probabilities <- predict(glm.out, as.data.frame(X_test), type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+table(predicted.classes, y_test)
+
+
+}
+\seealso{
+artp.fit
 }

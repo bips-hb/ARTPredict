@@ -14,8 +14,7 @@ Description: A package for predicting binary outcomes using the ARTP method acco
   Genet Epidemiol 2009; 33: 700–709.
 Depends: stats,
   speedglm
-Suggests: parallel,
-  future,
+Suggests: future,
   future.apply
 License: GPL-3
 Encoding: UTF-8

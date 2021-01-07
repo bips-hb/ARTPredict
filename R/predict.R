@@ -1,15 +1,25 @@
-#' Predict the Outcome with the ARTP
+#' Predict the outcome with the ARTP method
+#'
+#' @description Predicts the outcome based on the ARTP fit results, of binary data
+#' given the observed covariates.The function uses `speedglm`, and in case of
+#' non-applicability due to separation issues (in case of rare events), the function
+#' uses `glm`.
 #'
 #' @param fit The output of fit.artp
-#' @param X.new The new observation matrix
-#' @param alpha The significance level, no default.
-#' @param res.per.group The output of predict.per.group, no default.
-#' @param predict.all To predict based on all groups (Default = FALSE)
-# @param speedglm To use `speedglm` instead of `glm` (Default = FALSE)
+#' @param X.new The new observation matrix (n x m)
+#' @param alpha The significance level, no default
+#' @param res.per.group The output of predict.per.group, no default
+#' @param predict.all To predict outcome based on all groups (Default = FALSE)
 #'
-#' @return A list including predictions for the outcome y
+#' @return A list including predictions for the outcome y:
+#'         selected.groups: data frame of the p value for each selected group based on alpha
+#'         y.prob.per.group: logical matrix of predicted outcome per group using `predict.per.group`
+#'         y.group: row sum of prediction per selected group based on alpha
+#'         y.hat: the predicted response
 #'
-#' @example
+#' @seealso artp.fit
+#'
+#' @examples
 #' set.seed(235478965)
 #' m = 100
 #' n = 2000
@@ -29,9 +39,9 @@
 #' y_train <- y[1:1000]
 #' y_test  <- y[1001:2000]
 #'
-#' res <- artp.fit(X_train, y_train, groups = groups, verbose = T, trunc.point = 3)
+#' res <- artp.fit(X_train, y_train, groups = groups, verbose = TRUE, trunc.point = 3)
 #'
-#' pred <- artp.predict(res, X_test, alpha = .2)
+#' pred <- artp.predict(fit = res, X.new = X_test, alpha = .2)
 #' table(pred$y.hat, y_test)
 #'
 #' glm.out <- glm(y_train ~ X_train, family = binomial(link = "logit"))
@@ -49,8 +59,7 @@ artp.predict <- function(fit, X.new, alpha, res.per.group, predict.all = FALSE) 
   }
 
   if (isTRUE(predict.all)) {
-    # select the groups that are 'significant' using dplyr or subset data frame
-    # selected.groups <- fit$p.values.group %>% dplyr::filter(p <= alpha)
+    # select the groups that are 'significant' using subset data frame
     selected.groups <- fit$p.values.group[fit$p.values.group$p <= alpha, ]
 
     # no significant groups at all
@@ -65,14 +74,11 @@ artp.predict <- function(fit, X.new, alpha, res.per.group, predict.all = FALSE) 
   }
 
   # probabilities of y being one
-  # y.prob <- rowMeans(y.prob.per.group)
   y.group <- rowSums(y.prob.per.group)
 
   # decide whether TRUE or FALSE
-  # y.hat = as.numeric((y.prob > .5))
   y.hat <- as.numeric((y.group > 1))
 
-  # out <- list(selected.groups = selected.groups, y.prob = y.prob, y.hat = y.hat)
   out <- list(
     selected.groups = selected.groups,
     y.prob.per.group = res.per.group$y.prob.per.group,
@@ -82,6 +88,10 @@ artp.predict <- function(fit, X.new, alpha, res.per.group, predict.all = FALSE) 
   out
 }
 
+#' Predict outcome per group of covariates
+#'
+#' @inherit artp.predict params
+#' @seealso artp.predict
 #' @importFrom speedglm speedglm
 predict.per.group <- function(fit, X.new, alpha, predict.all) {
   # get the old y values. Used to fit the model for each group
@@ -112,9 +122,6 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
 
   if (isTRUE(parallel)) {
     # predict for each observation the value of y
-    # y.prob.per.group <- parallel::mcmapply(function(group.id) {
-    # future::plan(future::cluster(gc = TRUE), workers = c("node02", "node04", "node06", "node07", "node08"))
-    # future::plan(future::multiprocess(gc = TRUE))
     future::plan("multiprocess", workers = nc, gc = TRUE)
   } else {
     future::plan(future::sequential)
@@ -143,29 +150,10 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
 
     # decide whether TRUE or FALSE
     y.new <- (y.new > .5)
-    # }, mc.cores = nc, group.id = selected.groups$id, SIMPLIFY = TRUE, mc.preschedule = TRUE)
   }, group.id = selected.groups$id, SIMPLIFY = TRUE, future.packages = c("speedglm"), future.seed = NULL)
-  # } else {
-  # predict for each observation the value of y
-  # y.prob.per.group <- sapply(selected.groups$id, function(group.id) {
-  #   # get the old data for the current group
-  #   group <- groups[[group.id]]
-  #   data.old <- data.frame(cbind(X.old[, c(adjust_vars, group), drop = FALSE], y = y.old))
-  #
-  #   # get the new data of the current group
-  #   data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
-  #
-  #   # fit the model on the old data for that group alone
-  #   model <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
-  #
-  #   # predict whether or not the outcome is 1 given the new data of the current group
-  #   y.new <- stats::predict(model, newdata = data.new, type = "response")
-  #
-  #   # decide whether TRUE or FALSE
-  #   y.new <- (y.new > .5)
-  # })
-  # }
+
   dimnames(y.prob.per.group)[[2]] <- rownames(selected.groups)
+
   res.per.group <- list(
     y.prob.per.group = y.prob.per.group,
     selected.groups = selected.groups
