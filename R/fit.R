@@ -16,10 +16,12 @@
 #'                FALSE in case of parallel <- TRUE
 #' @param single_covariates If TRUE, covariates that do not belong to a group, get
 #'                          their own individual groups (Default = TRUE)
-#' @param parallel Boolean, whether to use future::plan("multiprocess")
+#' @param parallel Boolean, whether to use future::plan("multicore")
 #'                 (Default = FALSE)
-#' @param nc Number of cores/workers to use for future::plan("multiprocess")
+#' @param nc Number of cores/workers to use for future::plan("multicore")
 #'           (Default = 3)
+#' @param hosts Character vector of workers for future::plan("cluster"), no default,
+#'              e.g., c("node02", "node04", "node06", "node07", "node08")
 #'
 #' @return A list of input parameters for artp.predict:
 #'         p.values.group: data frame of the p value for each group
@@ -88,12 +90,15 @@ artp.fit <- function(X, y, groups, adjust_vars,
     # name the new groups
     names(groups) <- c(gnames, colnames(X)[unlist(variables_not_in_groups)])
   }
+  
+  progressr::with_progress({
+    p.values.combined <- get.p.value(
+      X = X, y = y, n.permutations = n.permutations, n.cov = n.cov,
+      cov_ind = cov_ind, adjust_vars = adjust_vars,
+      parallel = parallel, verbose = verbose, nc = nc
+    )
+  })
 
-  p.values.combined <- get.p.value(
-    X = X, y = y, n.permutations = n.permutations, n.cov = n.cov,
-    cov_ind = cov_ind, adjust_vars = adjust_vars,
-    parallel = parallel, verbose = verbose, nc = nc
-  )
 
   # map p-value indexes to group indexes
   colnames.X <- colnames(X)
@@ -143,72 +148,106 @@ get.p.value <- function(X, y,
                         adjust_vars,
                         parallel = FALSE,
                         nc = 3,
-                        verbose = FALSE) {
-  n.permutations.done <- 0
-
-  if (verbose) {
-    pb <- utils::txtProgressBar(
-      min = 0, max = n.cov * n.permutations,
-      title = "no. of permutations", style = 3
-    )
-  }
+                        verbose = FALSE, 
+                        hosts = NULL) {
+  # n.permutations.done <- 0
+  # 
+  # if (verbose) {
+  #   pb <- utils::txtProgressBar(
+  #     min = 0, max = n.cov * n.permutations,
+  #     title = "no. of permutations", style = 3
+  #   )
+  # }
+  
+  p <- progressr::progressor(steps = n.permutations)
 
   # compute the p-values
-  p.values <- sapply(cov_ind, function(i) {
-    model <- speedglm::speedglm(y ~ X[, c(adjust_vars, i), drop = FALSE],
-      family = stats::binomial(link = "logit")
-    )
-
-    # update progress bar
-    if (verbose) {
-      n.permutations.done <<- n.permutations.done + 1
-      utils::setTxtProgressBar(pb, n.permutations.done)
-    }
-
-    # get the lowest p-value of the covariates in the model
-    as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
-  })
-
-  # permutate the outcome (y) n.permutations time, create model
+  # p.values <- sapply(cov_ind, function(i) {
+  #   model <- speedglm::speedglm(y ~ X[, c(adjust_vars, i), drop = FALSE],
+  #     family = stats::binomial(link = "logit")
+  #   )
+  # 
+  #   # update progress bar
+  #   if (verbose) {
+  #     n.permutations.done <<- n.permutations.done + 1
+  #     utils::setTxtProgressBar(pb, n.permutations.done)
+  #   }
+  # 
+  #   # get the lowest p-value of the covariates in the model
+  #   as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
+  # })
+  
+  # cl <- parallel::makePSOCKcluster(3)
+  # parallel::clusterExport(cl, c("X", "y", "adjust_vars"))
+  # doParallel::registerDoParallel(cl)
+  p.values <- plyr::aaply(.data = X, .margins = 2, y = y, adjust_vars = adjust_vars, 
+                          .fun = get.p.value.cov)
+                          # .parallel = parallel, .progress = "text")
+  # parallel::stopCluster(cl)
+  # 
+  
+  # permute the outcome (y) n.permutations time, create model
   # and obtain the p-value for each covariate
-
+  
   if (isTRUE(parallel)) {
-    future::plan("multiprocess", workers = nc, gc = TRUE)
+    if (!missing(hosts)) {
+      future::plan("cluster", workers = hosts, gc = TRUE)
+    } else {
+      future::plan("multicore", workers = nc, gc = TRUE)
+    }
   } else {
     future::plan(future::sequential)
   }
-
-  p.values.permutations <- future.apply::future_mapply(FUN = function(k) {
+  
+  p.values.permutations <- furrr::future_map(.f = function(.x) {
     # create permutation
-    set.seed(k)
+    set.seed(.x)
     permutation <- sample(y)
+    p()
+    p.values <- plyr::aaply(.data = X, .margins = 2, y = permutation, adjust_vars = adjust_vars, 
+                            .fun = get.p.value.cov)
+  }, .x = 1:n.permutations, .options = furrr_options(seed = NULL, globals = "speedglm"))
+  
+  p.values.permutations <- matrix(unlist(p.values.permutations), ncol = n.permutations)
 
-    # leave one covariate out each time and store the p-value
-    p.values <- sapply(cov_ind, function(i) {
-
-      # fit the model without the covariate i
-      model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
-        family = stats::binomial(link = "logit")
-      )
-
-      # update progress bar
-      if (verbose) {
-        n.permutations.done <<- n.permutations.done + 1
-        utils::setTxtProgressBar(pb, n.permutations.done)
-      }
-
-      # get the lowest p-value of the covariates in the model
-      as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
-    })
-  }, k = 1:n.permutations, SIMPLIFY = TRUE, future.packages = c("speedglm"), future.seed = NULL)
-
-  if (verbose) {
-    close(pb)
-  }
+  # p.values.permutations <- future.apply::future_mapply(FUN = function(k) {
+  #   # create permutation
+  #   set.seed(k)
+  #   permutation <- sample(y)
+  # 
+  #   # leave one covariate out each time and store the p-value
+  #   p.values <- sapply(cov_ind, function(i) {
+  # 
+  #     # fit the model without the covariate i
+  #     model <- speedglm::speedglm(permutation ~ X[, c(adjust_vars, i), drop = FALSE],
+  #       family = stats::binomial(link = "logit")
+  #     )
+  # 
+  #     # update progress bar
+  #     if (verbose) {
+  #       n.permutations.done <<- n.permutations.done + 1
+  #       utils::setTxtProgressBar(pb, n.permutations.done)
+  #     }
+  # 
+  #     # get the lowest p-value of the covariates in the model
+  #     as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
+  #   })
+  # }, k = 1:n.permutations, SIMPLIFY = TRUE, future.packages = c("speedglm"), future.seed = NULL)
+  # 
+  # if (verbose) {
+  #   close(pb)
+  # }
 
   # combine the actual p-values with the permutated p-values
   p.values.combined <- t(cbind(p.values, p.values.permutations))
   dimnames(p.values.combined) <- list(NULL, colnames(X)[cov_ind])
 
   p.values.combined
+}
+
+get.p.value.cov <- function(x, y, adjust_vars) {
+  model <- speedglm::speedglm(y ~ x, family = stats::binomial(link = "logit"))
+  
+  # get the lowest p-value of the covariates in the model
+  as.numeric(stats::coefficients(summary(model))[(length(adjust_vars) + 2), 4])
 }
