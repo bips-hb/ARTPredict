@@ -26,7 +26,7 @@ assess_results <- function(response, labels) {
   # recall or tpr or sensitivity
   recall <- TP / (TP + FN)
   precision <- TP / (TP + FP)
-  specifity <- TN / (TN + FP)
+  specificity <- TN / (TN + FP)
   fpr <- FP / (TN + FP)
   fdr <- FP / (TP + FP)
   accuracy <- (TP + TN) / (TP + TN + FP + FN)
@@ -48,7 +48,7 @@ assess_results <- function(response, labels) {
     list(
       recall = recall,
       precision = precision,
-      specifity = specifity,
+      specificity = specificity,
       fpr = fpr,
       fdr = fdr,
       accuracy = accuracy,
@@ -112,7 +112,7 @@ assess_results(prediction_all$y.hat, y_test)
 
 ### Parallel using `future.apply` (formerly `parallel`)
 fit <- artp.fit(X = X_train, y = y_train, groups = groups, 
-  verbose = FALSE, parallel = TRUE)
+  verbose = TRUE, parallel = TRUE)
 prediction <- artp.predict(fit = fit, X.new = X_test, alpha = 0.2)
 table(prediction$y.hat, y_test)
 assess_results(prediction$y.hat, y_test)

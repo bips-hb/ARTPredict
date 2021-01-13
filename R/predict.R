@@ -120,11 +120,27 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
     }
   }
 
-  if (isTRUE(parallel)) {
-    # predict for each observation the value of y
-    future::plan("multiprocess", workers = nc, gc = TRUE)
+  # if (isTRUE(parallel)) {
+  #   # predict for each observation the value of y
+  #   future::plan("multiprocess", workers = nc, gc = TRUE)
+  # } else {
+  #   future::plan(future::sequential)
+  # }
+  
+  if (!is.na(parallel::detectCores()) | isTRUE(parallel)) {
+    cl <- parallel::makePSOCKcluster(nc)
+    parallel::clusterExport(cl, c("speedglm"))
+    doParallel::registerDoParallel(cl)
+    # registerDoMC(cores = 8)
   } else {
-    future::plan(future::sequential)
+    parallel <- FALSE
+  }
+  
+  y.prob.per.group <- plyr::aaply(.data = X, .margins = 1, data.new = data.new, adjust_vars = adjust_vars, 
+                          .fun = get.prob.group, .parallel = parallel)
+  
+  if (dim(showConnections())[[1]] > 0) {
+    parallel::stopCluster(cl)
   }
 
   y.prob.per.group <- future.apply::future_mapply(FUN = function(group.id) {
@@ -134,22 +150,7 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
 
     # get the new data of the current group
     data.new <- data.frame(X.new[, c(adjust_vars, group), drop = FALSE])
-
-    # fit the model on the old data for that group alone
-    model <- tryCatch({
-        setTimeLimit(cpu = Inf, elapsed = Inf)
-        expr <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
-      },
-      error = function(e) {
-        stats::glm(y ~ ., data.old, family = stats::binomial("logit"))
-      }
-    )
-
-    # predict whether or not the outcome is 1 given the new data of the current group
-    y.new <- stats::predict(model, newdata = data.new, type = "response")
-
-    # decide whether TRUE or FALSE
-    y.new <- (y.new > .5)
+    
   }, group.id = selected.groups$id, SIMPLIFY = TRUE, future.packages = c("speedglm"), future.seed = NULL)
 
   dimnames(y.prob.per.group)[[2]] <- rownames(selected.groups)
@@ -160,4 +161,27 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
   )
 
   res.per.group
+}
+
+#' Predict outcome of a group of covariates
+#'
+#' @inherit artp.predict description
+#' @seealso artp.predict
+#' @importFrom speedglm speedglm
+get.prob.group <- function(data.old, data.new) {
+  # fit the model on the old data for that group alone
+  model <- tryCatch({
+    setTimeLimit(cpu = Inf, elapsed = Inf)
+    expr <- speedglm::speedglm(y ~ ., data.old, family = stats::binomial("logit"))
+  },
+  error = function(e) {
+    stats::glm(y ~ ., data.old, family = stats::binomial("logit"))
+  }
+  )
+  
+  # predict whether or not the outcome is 1 given the new data of the current group
+  y.new <- stats::predict(model, newdata = data.new, type = "response")
+  
+  # decide whether TRUE or FALSE
+  y.new <- (y.new > .5)
 }

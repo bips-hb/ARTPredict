@@ -91,14 +91,13 @@ artp.fit <- function(X, y, groups, adjust_vars,
     names(groups) <- c(gnames, colnames(X)[unlist(variables_not_in_groups)])
   }
   
-  progressr::with_progress({
-    p.values.combined <- get.p.value(
-      X = X, y = y, n.permutations = n.permutations, n.cov = n.cov,
-      cov_ind = cov_ind, adjust_vars = adjust_vars,
-      parallel = parallel, verbose = verbose, nc = nc
-    )
-  })
-
+  progressr::handlers(global = verbose)
+  
+  p.values.combined <- get.p.value(
+    X = X, y = y, n.permutations = n.permutations, n.cov = n.cov,
+    cov_ind = cov_ind, adjust_vars = adjust_vars,
+    parallel = parallel, nc = nc
+  )
 
   # map p-value indexes to group indexes
   colnames.X <- colnames(X)
@@ -148,7 +147,7 @@ get.p.value <- function(X, y,
                         adjust_vars,
                         parallel = FALSE,
                         nc = 3,
-                        verbose = FALSE, 
+                        # verbose = FALSE, 
                         hosts = NULL) {
   # n.permutations.done <- 0
   # 
@@ -158,8 +157,6 @@ get.p.value <- function(X, y,
   #     title = "no. of permutations", style = 3
   #   )
   # }
-  
-  p <- progressr::progressor(steps = n.permutations)
 
   # compute the p-values
   # p.values <- sapply(cov_ind, function(i) {
@@ -180,9 +177,12 @@ get.p.value <- function(X, y,
   # cl <- parallel::makePSOCKcluster(3)
   # parallel::clusterExport(cl, c("X", "y", "adjust_vars"))
   # doParallel::registerDoParallel(cl)
+  # X.old <- X
+  # X <- X.old[, !adjust_vars, drop = FALSE]
+  # X <- X
   p.values <- plyr::aaply(.data = X, .margins = 2, y = y, adjust_vars = adjust_vars, 
                           .fun = get.p.value.cov)
-                          # .parallel = parallel, .progress = "text")
+                          # .parallel = parallel, .progress = "progressr")
   # parallel::stopCluster(cl)
   # 
   
@@ -199,6 +199,8 @@ get.p.value <- function(X, y,
     future::plan(future::sequential)
   }
   
+  p <- progressr::progressor(steps = n.permutations)
+  
   p.values.permutations <- furrr::future_map(.f = function(.x) {
     # create permutation
     set.seed(.x)
@@ -206,7 +208,11 @@ get.p.value <- function(X, y,
     p()
     p.values <- plyr::aaply(.data = X, .margins = 2, y = permutation, adjust_vars = adjust_vars, 
                             .fun = get.p.value.cov)
-  }, .x = 1:n.permutations, .options = furrr_options(seed = NULL, globals = "speedglm"))
+  }, .x = 1:n.permutations, 
+     .options = furrr::furrr_options(seed = NULL, 
+                                     packages = "speedglm",
+                                     chunk_size = NULL,
+                                     scheduling = 1))
   
   p.values.permutations <- matrix(unlist(p.values.permutations), ncol = n.permutations)
 
@@ -245,6 +251,11 @@ get.p.value <- function(X, y,
   p.values.combined
 }
 
+#' Get p-value for each covariate
+#'
+#' @inherit artp.fit description
+#' @seealso artp.fit
+#' @importFrom speedglm speedglm
 get.p.value.cov <- function(x, y, adjust_vars) {
   model <- speedglm::speedglm(y ~ x, family = stats::binomial(link = "logit"))
   

@@ -38,11 +38,14 @@ FALSE in case of parallel <- TRUE}
 \item{single_covariates}{If TRUE, covariates that do not belong to a group, get
 their own individual groups (Default = TRUE)}
 
-\item{parallel}{Boolean, whether to use future::plan("multiprocess")
+\item{parallel}{Boolean, whether to use future::plan("multicore")
 (Default = FALSE)}
 
-\item{nc}{Number of cores/workers to use for future::plan("multiprocess")
+\item{nc}{Number of cores/workers to use for future::plan("multicore")
 (Default = 3)}
+
+\item{hosts}{Character vector of workers for future::plan("cluster"), no default,
+e.g., c("node02", "node04", "node06", "node07", "node08")}
 }
 \value{
 A list of input parameters for artp.predict:
