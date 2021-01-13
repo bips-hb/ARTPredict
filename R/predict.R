@@ -95,8 +95,9 @@ artp.predict <- function(fit, X.new, alpha, res.per.group, predict.all = FALSE) 
 #' @importFrom speedglm speedglm
 predict.per.group <- function(fit, X.new, alpha, predict.all) {
   # get the old y values. Used to fit the model for each group
-  X.old <- fit$X
+  X.old <- data.frame(fit$X)
   y.old <- fit$y
+  X.new <- data.frame(X.new)
   groups <- fit$groups # the grouping with single_covariates appended
   adjust_vars <- fit$adjust_vars
   parallel <- fit$parallel
@@ -136,12 +137,13 @@ predict.per.group <- function(fit, X.new, alpha, predict.all) {
     parallel <- FALSE
   }
   
-  y.prob.per.group <- plyr::aaply(.data = X, .margins = 1, data.new = data.new, adjust_vars = adjust_vars, 
-                          .fun = get.prob.group, .parallel = parallel)
-  
   if (dim(showConnections())[[1]] > 0) {
     parallel::stopCluster(cl)
   }
+  
+  dlply(
+    .data = X.old,
+    .variables = , .f = dim)
 
   y.prob.per.group <- future.apply::future_mapply(FUN = function(group.id) {
     # get the old data for the current group
